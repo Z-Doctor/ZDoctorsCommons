@@ -85,10 +85,12 @@ public class BinaryReader implements Closeable {
 	}
 
 	public int cacheIndex() {
-		return (int) (position / MAX_ARRAY_SIZE);
+		return (int) (position() / MAX_ARRAY_SIZE);
 	}
 
 	public long position() {
+		if (position < 0)
+			position = 0;
 		return position;
 	}
 
@@ -103,7 +105,7 @@ public class BinaryReader implements Closeable {
 		else
 			position = pos;
 
-		return position;
+		return position();
 	}
 
 	public long seek(long pos) {
@@ -115,7 +117,7 @@ public class BinaryReader implements Closeable {
 		if (pos <= cacheLength)
 			position(pos);
 		else {
-			long read = pos - position;
+			long read = pos - position();
 //			System.out.println("To Read: " + read);
 			byte[] buff = new byte[bufferSize];
 			while (read > 0) {
@@ -129,7 +131,7 @@ public class BinaryReader implements Closeable {
 			}
 		}
 
-		return position;
+		return position();
 	}
 
 	public void setBufferSize(int size) {
@@ -160,8 +162,8 @@ public class BinaryReader implements Closeable {
 			return readLine(newLine.charAt(0), (char) 0);
 	}
 
-	public int available() throws IOException {
-		return reader.available();
+	public long available() {
+		return dataSize - position();
 	}
 
 	public String readLine(Character... escapeChars) {
@@ -179,6 +181,31 @@ public class BinaryReader implements Closeable {
 		return sb.toString();
 	}
 
+	public String readString(Character... ignore) {
+		String newLine = System.getProperty("line.separator");
+		if (newLine.length() > 1) {
+			StringBuilder sb = new StringBuilder();
+			try {
+				while (available() > 0) {
+					int read = read();
+
+					if (!ArrayUtil.contains(ignore, read)
+							&& (read == 0 || read == -1 || !Character.isLetterOrDigit(read)))
+						break;
+					else if (read == newLine.charAt(newLine.length() - 1)) {
+						sb.delete(sb.length() - (newLine.length() - 1), sb.length());
+						break;
+					}
+					sb.append((char) read);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return sb.toString();
+		} else
+			return readLine(newLine.charAt(0), (char) 0, ' ');
+	}
+
 	public String readString() {
 		String newLine = System.getProperty("line.separator");
 		if (newLine.length() > 1) {
@@ -186,7 +213,7 @@ public class BinaryReader implements Closeable {
 			try {
 				while (available() > 0) {
 					int read = read();
-					if (read == 0 || read == -1 || read == ' ')
+					if (read == 0 || read == -1 || !Character.isLetterOrDigit(read))
 						break;
 					else if (read == newLine.charAt(newLine.length() - 1)) {
 						sb.delete(sb.length() - (newLine.length() - 1), sb.length());
@@ -216,7 +243,7 @@ public class BinaryReader implements Closeable {
 	}
 
 	public long availableCache() {
-		return cacheLength - position;
+		return cacheLength - position();
 	}
 
 	public void overrideCache(byte... bytes) {
@@ -312,8 +339,14 @@ public class BinaryReader implements Closeable {
 		return read;
 	}
 
+	public int peekBack() throws IOException {
+		position -= 1;
+		int read = read();
+		return read;
+	}
+
 	public int read() throws IOException {
-		if (position >= cacheLength) {
+		if (position() >= cacheLength) {
 //			System.out.println("Read");
 			int read = reader.read();
 			addToCache((byte) read);
@@ -325,7 +358,7 @@ public class BinaryReader implements Closeable {
 	}
 
 	public int read(byte[] b) throws IOException {
-		if (position >= cacheLength) {
+		if (position() >= cacheLength) {
 			int read = reader.read(b);
 			for (int i = 0; i < read; i++) {
 				cache[cacheIndex()][longToInt(position++)] = b[i];
@@ -343,7 +376,7 @@ public class BinaryReader implements Closeable {
 	}
 
 	public int read(byte[] b, int off, int len) throws IOException {
-		if (position >= cacheLength) {
+		if (position() >= cacheLength) {
 			int read = reader.read(b, off, len);
 			for (int i = off; i < read; i++) {
 				addToCache(b[i]);

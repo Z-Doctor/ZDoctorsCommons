@@ -4,22 +4,21 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
-public class NodeDictionary<T> {
-	HashMap<T, byte[]> database = new HashMap<>();
+public abstract class NodeDictionary<K, V> {
+	HashMap<K[], V> database = new HashMap<>();
 
-	protected final Node<T> nodeTree = new Node<>();
+	protected final Node<K, V> nodeTree = new Node<>();
 
-	public void register(String key, T value) {
-		register(key.getBytes(), value);
-	}
+	public boolean register(K[] keys, V value) {
+		if (keys == null || keys.length <= 0)
+			return false;
 
-	public void register(byte[] keys, T value) {
-		if (keys.length <= 0)
-			return;
+		if (hasKey(keys))
+			return false;
 
 		int index = 0;
-		NodeIterator<T> nodeIterator = iterator();
-		Node<T> currentNode = nodeTree;
+		NodeIterator<K, V> nodeIterator = iterator();
+		Node<K, V> currentNode = nodeTree;
 
 		if (nodeIterator.nodesAvaiable()) {
 			while (index < keys.length && nodeIterator.hasNode(keys[index])) {
@@ -33,95 +32,68 @@ public class NodeDictionary<T> {
 		}
 
 		while (index < keys.length) {
-			Node<T> node = new Node<T>(keys[index]);
+			Node<K, V> node = new Node<K, V>(keys[index]);
 			currentNode.addChild(node);
 			currentNode = node;
 			index++;
 		}
 
 		currentNode.setValue(value);
-		currentNode.setFullKey(keys);
-		database.put(value, keys);
+		currentNode.setKey(keys);
+
+		database.put(keys, value);
+
+		return true;
 	}
 
-	public boolean hasKey(String key) {
-		return hasKey(key.getBytes());
-	}
+	public boolean hasKey(K[] keys) {
+		if (keys == null || keys.length <= 0)
+			return false;
 
-	public boolean hasKey(byte[] keys) {
-		if (keys.length <= 0)
+		if (database.size() <= 0)
 			return false;
 
 		int index = 0;
-		NodeIterator<T> nodeIterator = iterator();
-		Node<T> currentNode = nodeTree;
-		if (nodeIterator.nodesAvaiable()) {
-			while (index < keys.length && nodeIterator.hasNode(keys[index])) {
+		NodeIterator<K, V> nodeIterator = iterator();
+		Node<K, V> currentNode = nodeTree;
+		while (index < keys.length) {
+			if (nodeIterator.nodesAvaiable() && nodeIterator.hasNode(keys[index])) {
 				currentNode = nodeIterator.nextNode(keys[index++]);
-			}
-		} else
-			return false;
+			} else
+				return false;
+		}
+
 		return currentNode.getValue() != null;
 	}
 
-	public boolean hasValue(T value) {
-		return database.containsKey(value);
+	public boolean hasValue(V value) {
+		return database.values().contains(value);
 	}
 
-	public byte[] getKey(T value) {
-		return database.get(value);
+	public K[] getKeyOfValue(V value) {
+		if (database.values().contains(value)) {
+			for (K[] keys : database.keySet()) {
+				V temp = database.get(keys);
+				if (temp == value || value.equals(temp))
+					return keys;
+			}
+		}
+		return null;
 	}
 
-	public T lookUp(String key) {
-		return lookUp(key.getBytes());
-	}
-
-	public T lookUp(byte[] keys) {
+	public V lookUp(K[] keys) {
 		if (hasKey(keys))
 			return lookUpNode(keys).getValue();
 		return null;
 	}
 
-	public Object[] findMatches(byte[] fragment) {
-		ArrayList<T> matches = new ArrayList<>();
-
-		database.values().forEach(entry -> {
-			for (int i = 0; i < fragment.length; i++) {
-				if (entry.length <= i)
-					return;
-				if (entry[i] != fragment[i])
-					return;
-			}
-			matches.add(lookUp(entry));
-		});
-
-		if (matches.size() <= 0) {
-			database.keySet().forEach(value -> {
-				byte[] compare = value.toString().getBytes();
-				for (int i = 0; i < fragment.length; i++) {
-					if (compare.length <= i)
-						return;
-					if (compare[i] != fragment[i])
-						return;
-				}
-				matches.add(value);
-			});
-		}
-
-		return matches.toArray();
-	}
-
-	public Node<T> lookUpNode(String key) {
-		return lookUpNode(key.getBytes());
-	}
-
-	public Node<T> lookUpNode(byte[] keys) {
+	public Node<K, V> lookUpNode(K[] keys) {
 		if (keys.length <= 0)
 			return null;
 
 		int index = 0;
-		NodeIterator<T> nodeIterator = iterator();
-		Node<T> currentNode = null;
+		NodeIterator<K, V> nodeIterator = iterator();
+		Node<K, V> currentNode = null;
 		if (nodeIterator.nodesAvaiable()) {
 			while (index < keys.length && nodeIterator.hasNode(keys[index])) {
 				currentNode = nodeIterator.nextNode(keys[index++]);
@@ -131,11 +103,11 @@ public class NodeDictionary<T> {
 		return currentNode;
 	}
 
-	public Node<T> getNodeTree() {
+	public Node<K, V> getNodeTree() {
 		return nodeTree;
 	}
 
-	public NodeIterator<T> iterator() {
+	public NodeIterator<K, V> iterator() {
 		return new NodeIterator<>(nodeTree);
 	}
 
@@ -143,56 +115,69 @@ public class NodeDictionary<T> {
 		return database.size();
 	}
 
-	public static class Node<T> {
+	/**
+	 * Given a partial key, will search for keys that are similar
+	 * 
+	 * @param partialKey
+	 * @return similar keys
+	 */
+	public abstract K[][] searchSimilarKeys(K[] partialKey);
 
-		protected Node<T> parent;
-		protected NodeTree<T> children = new NodeTree<>();
+	/**
+	 * Given a partial value, will search for all the values that are similar
+	 * 
+	 * @param partialValue
+	 * @return similar values
+	 */
+	public abstract V[] searchSimilarValues(V partialValue);
 
-		protected byte key;
+	public static class Node<K, V> {
 
-		protected byte[] fullKey;
-		protected T value;
+		protected Node<K, V> parent;
+		protected NodeTree<K, V> children = new NodeTree<>();
+
+		protected K fragment;
+
+		protected K[] key;
+		protected V value;
 
 		public Node() {
+			// TODO Auto-generated constructor stub
 		}
 
-		public Node(byte key) {
+		public Node(K fragment) {
+			this.fragment = fragment;
+		}
+
+		public void setKey(K[] key) {
 			this.key = key;
 		}
 
-		public void setValue(T value) {
+		public void setValue(V value) {
 			this.value = value;
 		}
 
-		public void setFullKey(String fullKey) {
-			this.fullKey = fullKey.getBytes();
-		}
-
-		public void setFullKey(byte[] fullKey) {
-			this.fullKey = fullKey;
-		}
-
-		public T getValue() {
+		public V getValue() {
 			return value;
 		}
 
-		public Node<T> getChild(byte b) {
-			return getChild(new Node<T>(b));
+		public Node<K, V> getChild(K b) {
+			return getChild(new Node<K, V>(b));
 		}
 
-		public Node<T> getChild(Node<T> node) {
+		public Node<K, V> getChild(Node<K, V> node) {
 			return children.get(children.indexOf(node));
 		}
 
-		public boolean hasChild(byte b) {
-			return hasChild(new Node<T>(b));
+		public boolean hasChild(K b) {
+			return hasChild(new Node<K, V>(b));
 		}
 
-		public boolean hasChild(Node<T> node) {
+		public boolean hasChild(Node<K, V> node) {
 			return children.contains(node);
 		}
 
-		public boolean addChild(Node<T> node) {
+		public boolean addChild(Node<K, V> node) {
 			node.parent = this;
 
 			if (children == null)
@@ -201,11 +186,11 @@ public class NodeDictionary<T> {
 			return children.add(node);
 		}
 
-		public NodeIterator<T> iterator() {
+		public NodeIterator<K, V> iterator() {
 			return new NodeIterator<>(this);
 		}
 
-		public void forEach(Consumer<Node<T>> action) {
+		public void forEach(Consumer<Node<K, V>> action) {
 			children.forEach(action);
 		}
 
@@ -213,36 +198,34 @@ public class NodeDictionary<T> {
 		@SuppressWarnings("rawtypes")
 		public boolean equals(Object obj) {
 			if (obj instanceof Node) {
-				return ((Node) obj).key == this.key;
+				return ((Node) obj).fragment == this.fragment;
 			}
 			return super.equals(obj);
 		}
 
 		@Override
 		public String toString() {
-			if (Character.isAlphabetic(key) || Character.isDigit(key))
-				return "Node: '" + (char) key + "'";
-			return "Node: (" + key + ")";
+			return "Node[Fragment=" + fragment + ", Value=" + value + ", Key=" + key + ")";
 		}
 
-		public byte[] getKey() {
-			return fullKey;
+		public K[] getKey() {
+			return key;
 		}
 	}
 
-	public static class NodeTree<T> extends ArrayList<Node<T>> {
+	public static class NodeTree<K, V> extends ArrayList<Node<K, V>> {
 		private static final long serialVersionUID = 1817358323521937616L;
 
-		public boolean contains(byte b) {
-			return super.contains(new Node<T>(b));
-		}
+//		public boolean contains(K b) {
+//			return super.contains(new Node<K, V>(b));
+//		}
 	}
 
-	public static class NodeIterator<T> {
+	public static class NodeIterator<K, V> {
 
-		Node<T> currentNode;
+		Node<K, V> currentNode;
 
-		public NodeIterator(Node<T> startNode) {
+		public NodeIterator(Node<K, V> startNode) {
 			currentNode = startNode;
 		}
 
@@ -250,35 +233,35 @@ public class NodeDictionary<T> {
 			return currentNode.children != null && currentNode.children.size() > 0;
 		}
 
-		public boolean hasNode(byte b) {
+		public boolean hasNode(K b) {
 			return nodesAvaiable() && currentNode.hasChild(b);
 		}
 
-		public boolean hasNode(Node<T> node) {
+		public boolean hasNode(Node<K, V> node) {
 			return nodesAvaiable() && currentNode.hasChild(node);
 		}
 
-		public Node<T> nextNode(byte b) {
+		public Node<K, V> nextNode(K b) {
 			currentNode = currentNode.getChild(b);
 			return currentNode;
 		}
 
-		public Node<T> nextNode(Node<T> node) {
+		public Node<K, V> nextNode(Node<K, V> node) {
 			currentNode = currentNode.getChild(node);
 			return currentNode;
 		}
 
-		public Node<T> previousNode() {
+		public Node<K, V> previousNode() {
 			if (currentNode.parent != null)
 				currentNode = currentNode.parent;
 			return currentNode;
 		}
 
-		public Node<T> getCurrentNode() {
+		public Node<K, V> getCurrentNode() {
 			return currentNode;
 		}
 
-		public NodeTree<T> getChildren() {
+		public NodeTree<K, V> getChildren() {
 			return currentNode.children;
 		}
 
