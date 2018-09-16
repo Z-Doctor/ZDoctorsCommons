@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.function.BiConsumer;
 
 public class JSonReader {
 	private JSonObject json = new JSonObject();
@@ -78,8 +79,52 @@ public class JSonReader {
 
 	public static class JSonObject {
 		HashMap<String, JSonValue<?>> jsonValues = new HashMap<>();
-
 		private String input;
+
+		@Override
+		public String toString() {
+			return jsonValues.toString();
+		}
+
+		public String getInput() {
+			return input;
+		}
+
+		public HashMap<String, JSonValue<?>> getJsonValues() {
+			return new HashMap<>(jsonValues);
+		}
+
+		public JSonValue<?> get(String key) {
+			return getJsonValues().get(key);
+		}
+
+		public long getNumber(String key) {
+			return getJsonValues().get(key).getNumber();
+		}
+
+		public double getDecimal(String key) {
+			return getJsonValues().get(key).getDecimal();
+		}
+
+		public String getString(String key) {
+			return getJsonValues().get(key).getString();
+		}
+
+		public boolean getBoolean(String key) {
+			return getJsonValues().get(key).getBoolean();
+		}
+
+		public JSonObject getObject(String key) {
+			return getJsonValues().get(key).getObject();
+		}
+
+		public JSonArray getArray(String key) {
+			return getJsonValues().get(key).getArray();
+		}
+
+		public void forEach(BiConsumer<String, JSonValue<?>> action) {
+			getJsonValues().forEach(action);
+		}
 
 		protected JSonObject parseJson(String input) throws IOException {
 			input = input.trim();
@@ -103,19 +148,6 @@ public class JSonReader {
 			parseObject(input, start, this);
 
 			return this;
-		}
-
-		public String getInput() {
-			return input;
-		}
-
-		@Override
-		public String toString() {
-			return jsonValues.toString();
-		}
-
-		public HashMap<String, JSonValue<?>> getJsonValues() {
-			return new HashMap<>(jsonValues);
 		}
 
 		protected static int nextChar(String input, int start) {
@@ -166,7 +198,8 @@ public class JSonReader {
 						addValue(json, key, new JSonValue<Long>(ValueType.Number, Long.parseLong(num)));
 				} else if (Character.isLetter(c)) {
 					i = parseOther(input, i, json, key);
-				}
+				} else if (c == '}')
+					return i;
 			}
 
 			return charArray.length - 1;
@@ -278,11 +311,35 @@ public class JSonReader {
 			}
 			return sb.toString();
 		}
+
 	}
 
 	public static class JSonArray extends ArrayList<JSonValue<?>> {
 		private static final long serialVersionUID = 2861442472777821209L;
 
+		public long getNumber(int index) {
+			return get(index).getNumber();
+		}
+
+		public double getDecimal(int index) {
+			return get(index).getDecimal();
+		}
+
+		public String getString(int index) {
+			return get(index).getString();
+		}
+
+		public boolean getBoolean(int index) {
+			return get(index).getBoolean();
+		}
+
+		public JSonObject getObject(int index) {
+			return get(index).getObject();
+		}
+
+		public JSonArray getArray(int index) {
+			return get(index).getArray();
+		}
 	}
 
 	public static class JSonValue<T> {
@@ -305,6 +362,30 @@ public class JSonReader {
 		@Override
 		public String toString() {
 			return value.toString();
+		}
+
+		public long getNumber() {
+			return (long) getValue();
+		}
+
+		public double getDecimal() {
+			return (double) getValue();
+		}
+
+		public String getString() {
+			return (String) getValue();
+		}
+
+		public boolean getBoolean() {
+			return (boolean) getValue();
+		}
+
+		public JSonObject getObject() {
+			return (JSonObject) getValue();
+		}
+
+		public JSonArray getArray() {
+			return (JSonArray) getValue();
 		}
 
 	}
