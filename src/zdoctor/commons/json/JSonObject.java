@@ -2,57 +2,40 @@ package zdoctor.commons.json;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.function.BiConsumer;
 
 import zdoctor.commons.json.JSonValue.ValueType;
 
-public class JSonObject {
-	HashMap<String, JSonValue<?>> jsonValues = new HashMap<>();
+public class JSonObject extends HashMap<String, JSonValue<?>> {
+	private static final long serialVersionUID = 2295324745842639921L;
+	
 	private String input;
-
-	@Override
-	public String toString() {
-		return jsonValues.toString();
-	}
 
 	public String getInput() {
 		return input;
 	}
 
-	public HashMap<String, JSonValue<?>> getJsonValues() {
-		return new HashMap<>(jsonValues);
-	}
-
-	public JSonValue<?> get(String key) {
-		return getJsonValues().get(key);
-	}
-
 	public long getNumber(String key) {
-		return getJsonValues().get(key).getNumber();
+		return get(key).getNumber();
 	}
 
 	public double getDecimal(String key) {
-		return getJsonValues().get(key).getDecimal();
+		return get(key).getDecimal();
 	}
 
 	public String getString(String key) {
-		return getJsonValues().get(key).getString();
+		return get(key).getString();
 	}
 
 	public boolean getBoolean(String key) {
-		return getJsonValues().get(key).getBoolean();
+		return get(key).getBoolean();
 	}
 
 	public JSonObject getObject(String key) {
-		return getJsonValues().get(key).getObject();
+		return get(key).getObject();
 	}
 
 	public JSonArray getArray(String key) {
-		return getJsonValues().get(key).getArray();
-	}
-
-	public void forEach(BiConsumer<String, JSonValue<?>> action) {
-		getJsonValues().forEach(action);
+		return get(key).getArray();
 	}
 
 	protected JSonObject parseJson(String input) throws IOException {
@@ -163,7 +146,7 @@ public class JSonObject {
 				e.printStackTrace();
 			}
 		else
-			json.jsonValues.put(key, jSonValue);
+			json.put(key, jSonValue);
 	}
 
 	protected static int parseArray(String input, int start, JSonObject json, JSonArray jsonArray) throws IOException {
