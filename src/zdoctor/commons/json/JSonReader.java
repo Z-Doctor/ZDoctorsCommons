@@ -24,9 +24,18 @@ public class JSonReader {
 		this.input = input;
 	}
 
-	public JSonObject read() {
+	public JSonObject readObject() {
 		try {
-			return json.parseJson(input);
+			return json.parseJsonObject(input);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+	
+	public JSonArray readArray() {
+		try {
+			return json.parseJsonArray(input);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return null;
@@ -50,10 +59,10 @@ public class JSonReader {
 				quote++;
 		}
 
-		if (charArray[0] != '{')
-			throw new IOException("Invalid start of Json expected '{' got '" + charArray[0] + "'");
-		if (charArray[charArray.length - 1] != '}')
-			throw new IOException("Invalid end of Json expected '}' got '" + charArray[charArray.length - 1] + "'");
+//		if (charArray[0] != '{')
+//			throw new IOException("Invalid start of Json expected '{' got '" + charArray[0] + "'");
+//		if (charArray[charArray.length - 1] != '}')
+//			throw new IOException("Invalid end of Json expected '}' got '" + charArray[charArray.length - 1] + "'");
 		if (openO != closeO)
 			throwAndFindObject(input);
 		if (openA != closeA)

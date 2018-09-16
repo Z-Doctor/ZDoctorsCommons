@@ -38,7 +38,7 @@ public class JSonObject extends HashMap<String, JSonValue<?>> {
 		return get(key).getArray();
 	}
 
-	protected JSonObject parseJson(String input) throws IOException {
+	protected JSonObject parseJsonObject(String input) throws IOException {
 		input = input.trim();
 		this.input = input;
 
@@ -49,14 +49,31 @@ public class JSonObject extends HashMap<String, JSonValue<?>> {
 				parseObject(input, i, this);
 				break;
 			} else if (c == '[') {
-				JSonArray jsonArray = new JSonArray();
-				parseArray(input, i, this, jsonArray);
-				addValue(this, "Default", new JSonValue<JSonArray>(ValueType.ARRAY, jsonArray));
-				break;
+				throw new IOException("This is a JSonArray. Did you mean parseJsonArray?");
 			}
 		}
 
 		return this;
+	}
+
+	protected JSonArray parseJsonArray(String input) throws IOException {
+		input = input.trim();
+		this.input = input;
+
+		char[] charArray = input.toCharArray();
+		for (int i = 0; i < charArray.length; i++) {
+			char c = charArray[i];
+			if (c == '{') {
+				throw new IOException("This is a JSonObject. Did you mean parseJsonObject?");
+			} else if (c == '[') {
+				JSonArray temp = new JSonArray();
+				parseArray(input, i, this, temp, true);
+				return temp;
+			}
+		}
+
+		return new JSonArray();
+
 	}
 
 	protected static int nextChar(String input, int start) {
@@ -95,7 +112,7 @@ public class JSonObject extends HashMap<String, JSonValue<?>> {
 				}
 			} else if (c == '[') {
 				JSonArray temp = new JSonArray();
-				i = parseArray(input, i, json, temp);
+				i = parseArray(input, i, json, temp, false);
 				addValue(json, key, new JSonValue<JSonArray>(ValueType.ARRAY, temp));
 				key = "";
 			} else if (Character.isDigit(c)) {
@@ -146,16 +163,22 @@ public class JSonObject extends HashMap<String, JSonValue<?>> {
 			json.put(key, jSonValue);
 	}
 
-	protected static int parseArray(String input, int start, JSonObject json, JSonArray jsonArray) throws IOException {
+	protected static int parseArray(String input, int start, JSonObject json, JSonArray jsonArray, boolean inArray)
+			throws IOException {
 		char[] charArray = input.toCharArray();
 		String key = "";
 		for (int i = start; i < charArray.length; i++) {
 			char c = charArray[i];
 			if (c == '[' && i != start) {
+				System.out.println("New Array in array: " + key);
 				JSonArray temp = new JSonArray();
-				i = parseArray(input, i, json, temp);
-				addValue(json, key, new JSonValue<JSonArray>(ValueType.ARRAY, temp));
-				key = "";
+				i = parseArray(input, i, json, temp, true);
+				if (inArray)
+					jsonArray.add(new JSonValue<JSonArray>(ValueType.ARRAY, temp));
+				else {
+					addValue(json, key, new JSonValue<JSonArray>(ValueType.ARRAY, temp));
+					key = "";
+				}
 			} else if (c == '"') {
 				String s = parseString(input, i);
 				i += s.length() + 1;
