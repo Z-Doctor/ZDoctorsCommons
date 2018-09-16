@@ -1,4 +1,4 @@
-package zdoctor.commons.utils.data;
+package zdoctor.commons.io;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -60,9 +60,9 @@ public class BinaryReader implements Closeable {
 		setupCache();
 	}
 
-	public BinaryReader(InputStream ios, long dataSize) throws IOException {
+	public BinaryReader(InputStream ios) throws IOException {
 		reader = ios;
-		this.dataSize = dataSize;
+		this.dataSize = ios.available();
 		setupCache();
 	}
 

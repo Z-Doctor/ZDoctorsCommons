@@ -1,11 +1,11 @@
-package zdoctor.commons.utils.data;
+package zdoctor.commons.utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.function.Consumer;
 
 public abstract class NodeDictionary<K, V> {
-	HashMap<K[], V> database = new HashMap<>();
+	protected HashMap<K[], V> database = new HashMap<>();
 
 	protected final Node<K, V> nodeTree = new Node<>();
 

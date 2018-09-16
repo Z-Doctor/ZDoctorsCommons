@@ -5,13 +5,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import zdoctor.commons.utils.data.FileUtil;
+import zdoctor.commons.io.BinaryReader;
+import zdoctor.commons.io.util.FileUtil;
 
 public class WebDownloader {
 
@@ -170,4 +174,40 @@ public class WebDownloader {
 		return bos.toByteArray();
 	}
 
+	public static String getPublicIP() {
+		String ip = "";
+
+		try {
+			URL ipify = new URL("https://api.ipify.org");
+			BinaryReader br = new BinaryReader(ipify.openStream());
+			ip = br.readLine();
+			br.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return ip;
+	}
+
+	public static String getIPv4() {
+		try {
+			InetAddress inetAddress = InetAddress.getLocalHost();
+			return inetAddress.getHostAddress();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "null";
+	}
+	
+	public static String getHostName() {
+		try {
+			InetAddress inetAddress = InetAddress.getLocalHost();
+			return inetAddress.getHostName();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "null";
+	}
+	
 }

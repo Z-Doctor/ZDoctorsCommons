@@ -1,9 +1,7 @@
-package zdoctor.commons.utils.data;
+package zdoctor.commons.utils;
 
 import java.util.ArrayList;
 import java.util.Collections;
-
-import zdoctor.commons.utils.PrimitiveUtil;
 
 public class StringDictironary extends NodeDictionary<Character, String> {
 

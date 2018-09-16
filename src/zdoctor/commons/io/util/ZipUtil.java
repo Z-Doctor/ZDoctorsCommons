@@ -1,4 +1,4 @@
-package zdoctor.commons.utils.data;
+package zdoctor.commons.io.util;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
