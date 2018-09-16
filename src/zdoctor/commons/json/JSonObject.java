@@ -7,7 +7,7 @@ import zdoctor.commons.json.JSonValue.ValueType;
 
 public class JSonObject extends HashMap<String, JSonValue<?>> {
 	private static final long serialVersionUID = 2295324745842639921L;
-	
+
 	private String input;
 
 	public String getInput() {
@@ -43,21 +43,18 @@ public class JSonObject extends HashMap<String, JSonValue<?>> {
 		this.input = input;
 
 		char[] charArray = input.toCharArray();
-		int start = -1;
 		for (int i = 0; i < charArray.length; i++) {
 			char c = charArray[i];
 			if (c == '{') {
-				start = i;
+				parseObject(input, i, this);
+				break;
+			} else if (c == '[') {
+				JSonArray jsonArray = new JSonArray();
+				parseArray(input, i, this, jsonArray);
+				addValue(this, "Default", new JSonValue<JSonArray>(ValueType.ARRAY, jsonArray));
 				break;
 			}
 		}
-
-		if (start == -1) {
-			System.out.println("Could not find start of object");
-			return null;
-		}
-
-		parseObject(input, start, this);
 
 		return this;
 	}
